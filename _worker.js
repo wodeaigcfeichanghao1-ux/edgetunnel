@@ -5198,7 +5198,7 @@ async function 请求日志记录(env, request, 访问IP, 请求类型 = "Get_SU
 		是否写入KV日志 = ['1', 'true'].includes(env.OFF_LOG) ? false : 是否写入KV日志;
 		if (!是否写入KV日志) return;
 		let 日志数组 = [];
-		const 现有日志 = await env.KV.get('log.json'), KV容量限制 = 4;//MB
+		const 现有日志 = await env.KV.get('log.json', { cacheTtl: 300 });, KV容量限制 = 4;//MB
 		if (现有日志) {
 			try {
 				日志数组 = JSON.parse(现有日志);
@@ -5527,7 +5527,7 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 	};
 
 	try {
-		let configJSON = await env.KV.get('config.json');
+		let configJSON = await env.KV.get('config.json', { cacheTtl: 300 });
 		if (!configJSON || 重置配置 == true) {
 			await env.KV.put('config.json', JSON.stringify(默认配置JSON, null, 2));
 			config_JSON = 默认配置JSON;
@@ -5624,7 +5624,7 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 	const 初始化TG_JSON = { BotToken: null, ChatID: null };
 	config_JSON.TG = { 启用: config_JSON.TG.启用 ? config_JSON.TG.启用 : false, ...初始化TG_JSON };
 	try {
-		const TG_TXT = await env.KV.get('tg.json');
+		const TG_TXT = await env.KV.get('tg.json', { cacheTtl: 300 });
 		if (!TG_TXT) {
 			await env.KV.put('tg.json', JSON.stringify(初始化TG_JSON, null, 2));
 		} else {
@@ -5639,7 +5639,7 @@ async function 读取config_JSON(env, hostname, userID, UA = "Mozilla/5.0", 重�
 	const 初始化CF_JSON = { Email: null, GlobalAPIKey: null, AccountID: null, APIToken: null, UsageAPI: null };
 	config_JSON.CF = { ...初始化CF_JSON, Usage: { success: false, pages: 0, workers: 0, total: 0, max: 100000 } };
 	try {
-		const CF_TXT = await env.KV.get('cf.json');
+		const CF_TXT = await env.KV.get('cf.json', { cacheTtl: 300 });
 		if (!CF_TXT) {
 			await env.KV.put('cf.json', JSON.stringify(初始化CF_JSON, null, 2));
 		} else {
