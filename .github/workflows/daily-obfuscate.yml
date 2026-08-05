@@ -1,0 +1,93 @@
+name: Daily EdgeTunnel obfuscation
+
+on:
+  schedule:
+    - cron: '10 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-edgetunnel-obfuscation
+  cancel-in-progress: false
+
+jobs:
+  obfuscate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+
+      - name: Validate canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s origin.js
+          test "$(wc -c < origin.js)" -gt 10000
+          node --check origin.js
+
+      - name: Generate a fresh obfuscated Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          SEED="$((16#$(openssl rand -hex 4)))"
+          npx --yes javascript-obfuscator@4.1.1 origin.js --output _worker.js \
+            --compact true \
+            --identifier-names-generator hexadecimal \
+            --string-array true \
+            --string-array-encoding rc4 \
+            --string-array-rotate true \
+            --split-strings true \
+            --transform-object-keys true \
+            --control-flow-flattening false \
+            --dead-code-injection false \
+            --self-defending false \
+            --unicode-escape-sequence false \
+            --seed "$SEED"
+
+      - name: Verify syntax and Wrangler build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check _worker.js
+          npx --yes wrangler@4.28.1 deploy --dry-run --outdir .wrangler-dist
+
+      - name: Run local HTTP smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.28.1 dev --local --port 8787 > /tmp/wrangler.log 2>&1 &
+          WRANGLER_PID=$!
+          trap 'kill "$WRANGLER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8787/ > /tmp/smoke-response; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8787/ > /dev/null
+
+      - name: Report artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum _worker.js
+          wc -c _worker.js
+
+      - name: Commit verified deployment file
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- _worker.js
+          git commit -m "chore: refresh daily obfuscated worker [skip ci]"
+          git push origin HEAD:main
