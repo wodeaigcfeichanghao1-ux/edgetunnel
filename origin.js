@@ -41,10 +41,10 @@ export default {
 		TCP并发拨号数 = Math.max(1, Number(env.TCP_CONCURRENT_DIAL) || TCP并发拨号数);
 		if (!env.TCP_CONCURRENT_DIAL && TCP并发拨号数 !== 1 && 识别运营商(request) === 'cmcc') TCP并发拨号数 = 1;
 let 默认反代IP = (`${request.cf.colo}.${特征码字典[0]}.${特征码字典[1]}SsSs.nEt`).toLowerCase(), 默认反代兜底 = true;
-			const 硬编码反代IP = env.PROXYIP || 'kr.william.us.ci, ProxyIP.CMLiussss.net, ProxyIP.US.CMLiussss.net';
-			const proxyIPs = await 整理成数组(硬编码反代IP);
-			默认反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
-			默认反代兜底 = false;
+		const 硬编码反代IP = env.PROXYIP || 'kr.william.us.ci, ProxyIP.CMLiussss.net, ProxyIP.US.CMLiussss.net';
+		const proxyIPs = await 整理成数组(硬编码反代IP);
+		默认反代IP = proxyIPs[Math.floor(Math.random() * proxyIPs.length)];
+		默认反代兜底 = false;
 		const 访问IP = request.headers.get('CF-Connecting-IP') || request.headers.get('True-Client-IP') || request.headers.get('X-Real-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Cluster-Client-IP') || '未知IP';
 		if (缓存SOCKS5白名单 === null) {
 			if (env.GO2SOCKS5) SOCKS5白名单 = [...new Set(SOCKS5白名单.concat(await 整理成数组(env.GO2SOCKS5)))];
